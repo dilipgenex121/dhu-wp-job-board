@@ -184,6 +184,23 @@ class WP_Job_Board_Abstract_Filter {
 	            $distance_ids = array(0);
 			}
 	    }
+	    elseif (!empty($params['filter-center-location']) && $post_stype == 'job_listing') {
+	    	global $wpdb;
+	    	$prefix = WP_JOB_BOARD_JOB_LISTING_PREFIX;
+
+	    	$query1 = "SELECT $wpdb->posts.ID FROM $wpdb->posts INNER JOIN $wpdb->postmeta AS postmeta ON $wpdb->posts.ID = postmeta.post_id WHERE $wpdb->posts.post_type = '$post_stype' AND $wpdb->posts.post_status = 'publish' AND postmeta.meta_key = '".$prefix.'map_location_address'."' AND postmeta.meta_value LIKE '%".$params['filter-center-location']."%' ORDER BY $wpdb->posts.menu_order ASC";
+
+	    	$post_ids = $wpdb->get_results($query1, OBJECT_K);
+	
+	    	if ( $post_ids ) {
+			    foreach ( $post_ids as $post ) {
+					$distance_ids[] = $post->ID;
+			    }
+			}
+			if ( empty( $distance_ids ) || ! $distance_ids ) {
+	            $distance_ids = array(0);
+			}
+	    }
 	    
 	    return $distance_ids;
 	}

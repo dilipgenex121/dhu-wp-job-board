@@ -479,7 +479,7 @@ class WP_Job_Board_Job_Listing {
 		$apply_type = self::get_post_meta( $post_id, 'apply_type', true );
 		$application_deadline_date = self::get_post_meta( $post_id, 'application_deadline_date', true );
 		if ( empty($application_deadline_date) || strtotime($application_deadline_date) >= strtotime('now') ) {
-			if ( $apply_type == 'internal' && !is_user_logged_in() ) {
+			if (  in_array('internal', $apply_type) && !is_user_logged_in() ) {
 				return true;
 			}
 		}
@@ -496,15 +496,22 @@ class WP_Job_Board_Job_Listing {
 				<div class="deadline-time"><?php echo sprintf(__('Application ends: <strong>%s</strong>', 'wp-job-board'), date_i18n(get_option('date_format'), $deadline_date)); ?></div>
 				<?php
 			}
-			
-			if ( $apply_type == 'external' ) {
+
+			/**
+			 * Dated: July 26th, 2021
+			 * DV: CustomCodeDV(S)
+			 * Purpose: external, internal and with_email condtions updated because this field is changed single select to multi-select
+			 * Conditions updated on Line 482 (in_array('internal', $apply_type)) line:507 (in_array('external', $apply_type)) Line:514 (in_array('with_email', $apply_type))
+			 * START
+			 */
+			if (  in_array('external', $apply_type) && ! empty(self::get_post_meta( $post_id, 'apply_url', true )) ) {
 				$apply_url = self::get_post_meta( $post_id, 'apply_url', true );
 				if ( !empty($apply_url) ) {
 					?>
 					<a href="<?php echo esc_url($apply_url); ?>" target="_blank" class="btn btn-apply btn-apply-job-external"><?php esc_html_e('Apply Now', 'wp-job-board'); ?><i class="next flaticon-right-arrow"></i></a>
 					<?php
 				}
-			} elseif ( $apply_type == 'with_email' ) {
+			} else if (  in_array('with_email', $apply_type) ) {
 				?>
 				<a href="#job-apply-email-form-wrapper-<?php echo esc_attr($post_id); ?>" class="btn btn-apply btn-apply-job-email" data-job_id="<?php echo esc_attr($post_id); ?>"><?php esc_html_e('Apply Now', 'wp-job-board'); ?><i class="next flaticon-right-arrow"></i></a>
 				<!-- email apply form here -->

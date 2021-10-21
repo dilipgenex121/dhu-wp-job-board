@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WP_Job_Board_Query {
 	
 	public static function get_posts( $params = array(), $filter_params = null ) {
+
 		$params = wp_parse_args( $params, array(
 			'post_type' => 'job_listing',
 			'post_per_page' => -1,
@@ -34,6 +35,7 @@ class WP_Job_Board_Query {
 		));
 		extract($params);
 
+		
 		$query_args = array(
 			'post_type'         => $post_type,
 			'paged'         	=> $paged,
@@ -45,6 +47,21 @@ class WP_Job_Board_Query {
 
 		if ( !empty($post__in) ) {
 	    	$query_args['post__in'] = $post__in;
+			// $post_ids = get_posts(array(
+			// 	'post_type' => 'job_listing',
+			//     'post_status' => 'publish',
+			// 	'fields' => 'ids',
+			// 	'meta_query' => array(
+			// 		array(
+			// 			'key'     => '_job_custom_career-level',
+			// 			'value'   => 'Anyone in US',
+			// 			'compare' => 'LIKE',
+			// 		),
+			// 	),
+			// ));
+			
+			// array_merge($query_args['post__in'],$post_ids);
+			// pprint_r($query_vars);die('query');
 	    }
 	    
 	    if ( !empty($s) ) {
@@ -75,23 +92,27 @@ class WP_Job_Board_Query {
 			// TODO: apply filter params
 			switch ($post_type) {
 				case 'job_listing':
+					// Adding Premium prioritize
+
 					$query_args = WP_Job_Board_Job_Filter::get_query_var_filter($query_args, $filter_params);
+					
 					if ( !empty($filter_params_counter) ) {
 						$query_args = WP_Job_Board_Job_Filter::get_query_var_filter($query_args, $filter_params_counter);
 					}					
-
+					
 					// Meta query
 					$meta_query = WP_Job_Board_Job_Filter::get_meta_filter($filter_params);
 					if ( $meta_query ) {
 						$query_args['meta_query'] = $meta_query;
 					}
+					
 					if ( !empty($filter_params_counter) ) {
 						$meta_query = WP_Job_Board_Job_Filter::get_meta_filter($filter_params_counter);
 						if ( $meta_query ) {
 							$query_args['meta_query'] = $meta_query;
 						}
 					}
-
+					
 					// Tax query
 					$tax_query = WP_Job_Board_Job_Filter::get_tax_filter($filter_params);
 					if ( $tax_query ) {
@@ -103,7 +124,7 @@ class WP_Job_Board_Query {
 							$query_args['tax_query'] = $tax_query;
 						}
 					}
-
+					
 					break;
 				case 'employer':
 					$query_args = WP_Job_Board_Employer_Filter::get_query_var_filter($query_args, $filter_params);
@@ -166,7 +187,7 @@ class WP_Job_Board_Query {
 					}
 					break;
 			}
-
+			
 			$query_args = apply_filters('wp-job-board-'.$post_type.'-query-args', $query_args, $filter_params);
 		}
 		

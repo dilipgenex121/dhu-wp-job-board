@@ -201,7 +201,6 @@ class WP_Job_Board_Shortcodes {
 				return WP_Job_Board_Template_Loader::get_template_part( 'misc/employer-dashboard', array( 'user_id' => $user_id, 'employer_id' => $employer_id ) );
 			}
 	    }
-
     	return WP_Job_Board_Template_Loader::get_template_part( 'misc/not-allowed' );
 	}
 
@@ -246,6 +245,23 @@ class WP_Job_Board_Shortcodes {
 				return __( 'A metabox with the specified \'metabox_id\' doesn\'t exist.', 'wp-job-board' );
 			}
 			$metaboxes_form = $metaboxes[ WP_JOB_BOARD_CANDIDATE_PREFIX . 'front' ];
+			//----------------------
+			/*if(isset($metaboxes_form['fields']) && !empty($metaboxes_form['fields']))
+			{
+				foreach($metaboxes_form['fields'] as $id=>$single_field)
+				{
+					if($single_field['id'] == '_candidate_job_title')
+					{
+						$metaboxes_form['fields'][$id]['name'] = 'Last Job Title';
+					}
+				}
+			}
+			//----------------------
+			
+			echo '<pre>';
+			print_r($metaboxes_form);
+			echo '</pre>';*/
+
 			$post_id = WP_Job_Board_User::get_candidate_by_user_id($user_id);
 	    } elseif ( WP_Job_Board_User::is_employee($user_id) && wp_job_board_get_option('employee_edit_employer_profile') == 'on' ) {
 	    	$user_id = WP_Job_Board_User::get_user_id($user_id);
@@ -277,6 +293,7 @@ class WP_Job_Board_Shortcodes {
 	    }
 	    
 	    $metaboxes = apply_filters( 'cmb2_meta_boxes', array() );
+
 	    $metaboxes_form = array();
 	    $user_id = WP_Job_Board_User::get_user_id();
 	    
@@ -633,17 +650,135 @@ class WP_Job_Board_Shortcodes {
 		    $paged = 1;
 		}
 
+		/**
+		* Dated: July 19th, 2021
+		* DV: CustomCodeDV(S)
+		* Creating upload file URL of cdl and medical card
+		* START
+		*/
+
+		// Function used to save meta value '_author_member' for all jobs
+		// dhu_set_jobs_author_member_plan();
+
+		/* End */
+
 		$query_args = array(
 			'post_type' => 'job_listing',
 		    'post_status' => 'publish',
 		    'post_per_page' => $atts['limit'],
 		    'paged' => $paged,
 		);
+		// unset($_GET['filter-center-latitude']);
+		// unset($_GET['filter-center-longitude']);
+		// unset($_GET['filter-center-location']);
+		// unset($_GET['filter-distance']);
+
+		/* Start date- 06-10-21 */
+		// Also change this variable in child theme file to check on filter apply
+		$priority_level = 'Anywhere in the US';
+		if(array_key_exists('filter-custom-career-level', $_GET) && in_array('Anywhere in the US', $_GET['filter-custom-career-level']))
+		{
+			$pos = array_search($priority_level, $_GET['filter-custom-career-level']);
+			unset($_GET['filter-custom-career-level'][$pos]);
+		}
+
+
+		//
+		//print_r($pkg);
+		//$user_id = 26;
+		//$packages = WP_Job_Board_Wc_Paid_Listings_Mixes::get_packages_by_user( $user_id, false, 'all' );
+		//aprint_r($packages);
+		//
+
+		$anyone_args = array(
+			'post_type' => 'job_listing',
+		    'post_status' => 'publish',
+		    'posts_per_page' => -1,
+		    'orderby' => array(
+                    'menu_order' => 'ASC',
+                    'date' => 'DESC',
+                    'ID' => 'DESC'
+            ),
+		    'order' => 'DESC',
+           	'meta_query' => array(
+                array(
+					'key' => '_job_custom_career-level',
+                    'value' => $priority_level,
+                    'compare' => 'LIKE'
+                )
+            )
+		);
+		$us_posts = new WP_Query( $anyone_args );
+		/* End date- 06-10-21 */
+
 		$params = true;
 		if ( WP_Job_Board_Job_Filter::has_filter() ) {
 			$params = $_GET;
 		}
+
+		
 		$jobs = WP_Job_Board_Query::get_posts($query_args, $params);
+		
+		/* Start date- 06-10-21 */
+		$all_jobs_qr = $jobs->query;
+		$all_jobs_qr['posts_per_page'] = -1;
+		$all_jobs_qr['fields'] = 'ids';
+		unset($all_jobs_qr['paged']);
+		unset($all_jobs_qr['orderby']);
+		unset($all_jobs_qr['order']);
+
+		$all_jobs = new WP_Query( $all_jobs_qr );
+		
+		$append_jobs = array();
+		if(!empty($us_posts->posts))
+		{
+			if(!empty($all_jobs->posts))
+			{
+				foreach($us_posts->posts as $single_us_post)
+				{
+					if(!in_array($single_us_post->ID, $all_jobs->posts))
+					{
+						$append_jobs[] = $single_us_post;
+					}
+				}
+			}
+			else{
+				$append_jobs = $us_posts->posts;
+			}
+		}
+		$posts_under_filter = count($all_jobs->posts);
+		unset($us_posts);
+		unset($all_jobs);
+		
+		$no_append_pages = $jobs->max_num_pages;
+		
+		if($paged >= $no_append_pages)
+		{
+			$post_count = $jobs->post_count;
+			if($post_count < $atts['limit'])
+			{
+				$count = 0;
+				if($paged > $no_append_pages)
+				{
+					$count = (($paged-1) * $atts['limit']) - $posts_under_filter;
+				}
+
+				for($i = $post_count; $i < $atts['limit']; $i++)
+				{
+					if(isset($append_jobs[$count]))
+					{
+						$jobs->posts[] = $append_jobs[$count];
+						$jobs->post_count = $jobs->post_count+1;
+						$count++;
+						//break;
+					}
+				}
+			}
+		}
+		$jobs->found_posts = $posts_under_filter + count($append_jobs);
+		$jobs->max_num_pages = ceil($jobs->found_posts / $atts['limit']);
+
+		/* End date- 06-10-21 */
 		return WP_Job_Board_Template_Loader::get_template_part( 'misc/jobs', array( 'jobs' => $jobs, 'atts' => $atts ) );
 	}
 

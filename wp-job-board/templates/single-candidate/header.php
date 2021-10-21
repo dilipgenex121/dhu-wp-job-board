@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 global $post;
-return false;
+
 
 $categories = get_the_terms( $post->ID, 'candidate_category' );
 $address = WP_Job_Board_Candidate::get_post_meta( $post->ID, 'address', true );

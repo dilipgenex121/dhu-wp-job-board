@@ -75,6 +75,7 @@ class WP_Job_Board_Submit_Form extends WP_Job_Board_Abstract_Form {
 		}
 		
 		$cmb = cmb2_get_metabox( WP_JOB_BOARD_JOB_LISTING_PREFIX . 'front' );
+		
 		if ( ! isset( $_POST[ $cmb->nonce() ] ) || ! wp_verify_nonce( $_POST[ $cmb->nonce() ], $cmb->nonce() ) ) {
 			return;
 		}

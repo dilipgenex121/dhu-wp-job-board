@@ -175,6 +175,7 @@ class WP_Job_Board_Job_Filter extends WP_Job_Board_Abstract_Filter {
 		}
 
 		$distance_ids = self::filter_by_distance($params, 'job_listing');
+		
 		if ( !empty($distance_ids) ) {
 			$ids = self::build_post_ids( $ids, $distance_ids );
 		}

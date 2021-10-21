@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		/**
 		 * wp_job_board_after_loop_job
 		 */
-		do_action( 'wp_job_board_after_loop_job', $jobs );
+		//do_action( 'wp_job_board_after_loop_job', $jobs );
 
 		WP_Job_Board_Mixes::custom_pagination( array(
 			'max_num_pages' => $jobs->max_num_pages,

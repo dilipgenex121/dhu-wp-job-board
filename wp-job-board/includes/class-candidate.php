@@ -449,6 +449,7 @@ class WP_Job_Board_Candidate {
 		
 		do_action('wp-job-board-process-apply-email', $_POST);
 
+		$cv_url_with_id = array();
 		// cv file
         $cv_file_url = '';
         if ( !empty($_FILES['cv_file']) && !empty($_FILES['cv_file']['name']) ) {
@@ -458,8 +459,162 @@ class WP_Job_Board_Candidate {
 
             	$admin_url = admin_url( 'admin-ajax.php' );
             	$cv_file_url = add_query_arg(array('action' => 'wp_job_board_ajax_download_file', 'file_id' => $attach_id), $admin_url);
+				$cv_url_with_id[$attach_id] = wp_get_attachment_url( $attach_id );
             }
         }
+		
+		/**
+		* Dated: July 16th, 2021
+		* DV: CustomCodeDV(S)
+		* Creating upload file URL of cdl and medical card
+		* START
+		*/
+		
+		$driver_licence_file_url = '';
+        if ( !empty($_FILES['driver_licence_file']) && !empty($_FILES['driver_licence_file']['name']) ) {
+            $file_data = WP_Job_Board_Image::upload_cv_file($_FILES['driver_licence_file']);
+            if ( $file_data && !empty($file_data->url) ) {
+            	$attach_id = WP_Job_Board_Image::create_attachment( $file_data->url, 0 );
+
+            	$admin_url = admin_url( 'admin-ajax.php' );
+            	$driver_licence_file_url = add_query_arg(array('action' => 'wp_job_board_ajax_download_file', 'file_id' => $attach_id), $admin_url);
+            }
+        }
+		
+		if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+			$cdl_file_url = '';
+			if ( !empty($_FILES['cdl_file']) && !empty($_FILES['cdl_file']['name']) ) {
+				$file_data = WP_Job_Board_Image::upload_cv_file($_FILES['cdl_file']);
+				if ( $file_data && !empty($file_data->url) ) {
+					$attach_id = WP_Job_Board_Image::create_attachment( $file_data->url, 0 );
+
+					$admin_url = admin_url( 'admin-ajax.php' );
+					$cdl_file_url = add_query_arg(array('action' => 'wp_job_board_ajax_download_file', 'file_id' => $attach_id), $admin_url);
+				}
+			}
+
+			// custom code for cdl
+			$medical_card_file_url = '';
+			if ( !empty($_FILES['medical_card_file']) && !empty($_FILES['medical_card_file']['name']) ) {
+				$file_data = WP_Job_Board_Image::upload_cv_file($_FILES['medical_card_file']);
+				if ( $file_data && !empty($file_data->url) ) {
+					$attach_id = WP_Job_Board_Image::create_attachment( $file_data->url, 0 );
+
+					$admin_url = admin_url( 'admin-ajax.php' );
+					$medical_card_file_url = add_query_arg(array('action' => 'wp_job_board_ajax_download_file', 'file_id' => $attach_id), $admin_url);
+				}
+			}
+		}
+
+		$unregisterd_user = false;
+		if( ! empty($_POST['wjb_register_in_wp']) && $_POST['wjb_register_in_wp'] == 'yes' && ! is_user_logged_in() ) {
+			$website = site_url();
+			$passw = wp_generate_password(6, false);
+			$userdata = array(
+				'user_login' =>  $email,
+				'user_url'   =>  $website,
+				'user_pass'  =>  $passw
+			);
+			
+			$user_id = wp_insert_user( $userdata ) ;
+			
+			// On success.
+			if ( ! is_wp_error( $user_id ) ) {
+				wp_new_user_notification( $user_id, $passw, 'both' );
+				$uploaded_files = array(
+					'cv_file_url' => $cv_file_url,
+				);
+
+				if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+					$uploaded_files['cdl_file_url'] = $cdl_file_url;
+					$uploaded_files['medical_card_file_url'] = $medical_card_file_url;
+				}
+
+				
+				$candidate_id = WP_Job_Board_User::get_candidate_by_user_id($user_id);
+				
+				$cv_att = get_post_meta( $candidate_id, '_candidate_cv_attachment', true );
+				if( empty($cv_att) ) {
+					$cv_att = array();
+				}
+				foreach( $cv_url_with_id as $skey => $svalue ) {
+					$cv_att[$skey] = $svalue;
+				}
+				
+				update_post_meta( $candidate_id, '_candidate_cv_attachment_img', $cv_att );
+				update_post_meta( $candidate_id, '_candidate_cv_attachment', $cv_att );
+
+				update_user_meta( $user_id, 'apply_job_uploaded_files_' . $job_id, $uploaded_files );
+			}
+		} else if( is_user_logged_in() ) {
+			$user_id = get_current_user_id();
+			$uploaded_files = array(
+				'cv_file_url' => $cv_file_url,
+			);
+
+			if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+				$uploaded_files['cdl_file_url'] = $cdl_file_url;
+				$uploaded_files['medical_card_file_url'] = $medical_card_file_url;
+			}
+
+			$candidate_id = WP_Job_Board_User::get_candidate_by_user_id($user_id);
+				
+			$cv_att = get_post_meta( $candidate_id, '_candidate_cv_attachment', true );
+			if( empty($cv_att) ) {
+				$cv_att = array();
+			}
+			foreach( $cv_url_with_id as $skey => $svalue ) {
+				$cv_att[$skey] = $svalue;
+			}
+			
+			update_post_meta( $candidate_id, '_candidate_cv_attachment_img', $cv_att );
+			update_post_meta( $candidate_id, '_candidate_cv_attachment', $cv_att );
+
+			update_user_meta( $user_id, 'apply_job_uploaded_files_' . $job_id, $uploaded_files );
+		} else if( empty( $_POST['wjb_register_in_wp'] ) && ! is_user_logged_in() ) {
+			$user = get_user_by('email', $email);
+			if( $user ) {
+				$user_id = $user->ID;
+				$uploaded_files = array(
+					'cv_file_url' => $cv_file_url,
+				);
+				
+				if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+					$uploaded_files['cdl_file_url'] = $cdl_file_url;
+					$uploaded_files['medical_card_file_url'] = $medical_card_file_url;
+				}
+
+				$candidate_id = WP_Job_Board_User::get_candidate_by_user_id($user_id);
+				
+				$cv_att = get_post_meta( $candidate_id, '_candidate_cv_attachment', true );
+				if( empty($cv_att) ) {
+					$cv_att = array();
+				}
+				foreach( $cv_url_with_id as $skey => $svalue ) {
+					$cv_att[$skey] = $svalue;
+				}
+				
+				update_post_meta( $candidate_id, '_candidate_cv_attachment_img', $cv_att );
+				update_post_meta( $candidate_id, '_candidate_cv_attachment', $cv_att );
+
+				update_user_meta( $user_id, 'apply_job_uploaded_files_' . $job_id, $uploaded_files );
+			} else {
+				$unregisterd_user = true;
+				$uploaded_files = get_option( 'guest_apply_job_uploaded_files_' . $job_id, array() );
+				$uploaded_files[$email] = array(
+					'cv_file_url' => $cv_file_url,
+				);
+
+				if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+					$uploaded_files[$email]['cdl_file_url'] = $cdl_file_url;
+					$uploaded_files[$email]['medical_card_file_url'] = $medical_card_file_url;
+				}
+				update_option( 'guest_apply_job_uploaded_files_' . $job_id, $uploaded_files );
+			} 
+		}
+		/**
+		 * End
+		 */
 
         $email_subject = WP_Job_Board_Email::render_email_vars( array('job_title' => $post->post_title), 'email_apply_job_notice', 'subject');
         $email_content_args = array(
@@ -470,20 +625,89 @@ class WP_Job_Board_Candidate {
         	'phone' => $phone,
         	'cv_file_url' => $cv_file_url,
         );
-        $email_content = WP_Job_Board_Email::render_email_vars( $email_content_args, 'email_apply_job_notice', 'content');
+
+		/**
+		 * Dated: July 16th, 2021
+		 * DV: CustomCodeDV(S)
+		 * Add params only if share checkbox is checked
+		 * START
+		 */
+		// if user want to share cdl and medical card with the employer
+		if( ! empty($_POST['share_with_employer']) && $_POST['share_with_employer'] == 'yes') {
+			$email_content_args['cdl_file_url'] = $cdl_file_url;
+        	$email_content_args['medical_card_file_url'] = $medical_card_file_url;
+		}
+
+		if( ! empty($driver_licence_file_url) ) {
+			$email_content_args['driver_licence_file_url'] = $driver_licence_file_url;
+		}
 		
-        $headers = sprintf( "From: %s <%s>\r\n Content-type: text/html", $fullname, $email );
-        
+		$clean_mvr = '';
+		if( ! empty($_POST['clean_mvr']) ) {
+			$email_content_args['clean_mvr'] = $_POST['clean_mvr'];
+			$clean_mvr = $_POST['clean_mvr'];
+		}
+
+		$cdl_driving_experience = '';
+		if( ! empty($_POST['cdl_driving_experience']) ) {
+
+			$experienceKeyValueArray = array(
+				"1_5_months" => "1-5 Months",
+				"6_11_months" => "6-11 Months",
+				"1_year" => "1 Year",
+				"2_years" => "2 Years",
+				"3_years" => "3 Years",
+				"4_years" => "4 Years",
+				"5_plus_years" => "5+ Years"
+			);
+
+			$email_content_args['cdl_driving_experience'] = $_POST['cdl_driving_experience'];
+			$cdl_driving_experience = $experienceKeyValueArray[$_POST['cdl_driving_experience']];
+		}
+
+		$meet_the_requirement = '';
+		if( ! empty($_POST['meet_the_requirement']) ) {
+			$email_content_args['meet_the_requirement'] = $_POST['meet_the_requirement'];
+			$meet_the_requirement = $_POST['meet_the_requirement'];
+		}
+		/**
+		 * End
+		 */
+		
+        $email_content = WP_Job_Board_Email::render_email_vars( $email_content_args, 'email_apply_job_notice', 'content');
+		$headers = sprintf( "From: %s <%s>\r\n Content-type: text/html", $fullname, $email );
         $author_email = get_post_meta( $post->ID, WP_JOB_BOARD_JOB_LISTING_PREFIX.'apply_email', true);
+
 		if ( empty($author_email) ) {
 			$author_email = get_post_meta( $post->ID, WP_JOB_BOARD_JOB_LISTING_PREFIX.'email', true);
 		}
 		if ( empty($author_email) ) {
 			$author_email = get_the_author_meta( 'user_email', $post->post_author );
 		}
-
+		
 		$result = WP_Job_Board_Email::wp_mail( $author_email, $email_subject, $email_content, $headers );
+
 		if ( $result ) {
+			if( $unregisterd_user ) {
+				$job_data = array(
+					'job_id' => $job_id,
+					'fullname' => $fullname,
+					'applicant_email' => $email,
+					'phone' => $phone,
+					'message' => sanitize_text_field($message),
+					'cv_file_url' => !empty($cv_file_url)?$cv_file_url:"",
+					'cdl_file_url' => !empty($cdl_file_url)?$cdl_file_url:"",
+					'medical_card_file_url' => !empty($medical_card_file_url)?$medical_card_file_url:"",
+					'driver_licence_file_url' => !empty($driver_licence_file_url)?$driver_licence_file_url:"",
+					'cdl_driving_experience' => !empty($cdl_driving_experience)?$cdl_driving_experience:"",
+					'clean_mvr' => !empty($clean_mvr)?$clean_mvr:"",
+					'meet_the_requirement' => !empty($meet_the_requirement)?$meet_the_requirement:"",
+					'signup_email_sent' => "0"
+				);
+
+				$is_data_inserted = wpjb_add_unregistered_applicant( $job_data );
+
+			}
 			$return = array( 'status' => true, 'msg' => esc_html__('Applied to job successfully.', 'wp-job-board') );
 		   	echo wp_json_encode($return);
 		   	exit;

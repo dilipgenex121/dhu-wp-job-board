@@ -418,6 +418,10 @@ class WP_Job_Board_Post_Type_Job_Listing {
 						'internal' => __( 'Internal', 'wp-job-board' ),
 						'external' => __( 'External URL', 'wp-job-board' ),
 						'with_email' => __( 'By Email', 'wp-job-board' ),
+					),
+					'attributes'		=> array(
+						'multiple' => 'multiple',
+						'name'	   => self::$prefix . 'apply_type[]',
 					)
 				),
 				array(

@@ -205,6 +205,53 @@ class WP_Job_Board_Email {
 	public static function render_email_vars($args, $key, $type = 'subject') {
 		self::emails_vars();
 		$output = wp_job_board_get_option($key.'_'.$type);
+
+		/**
+		 * Dated: July 16th, 2021
+		 * DV: CustomCodeDV(S)
+		 * Purpose: Adding CDL and Medical card upload facility for driver while appling job
+		 * START
+		 * This content is modified from email section of job posting
+		 */
+		
+		// 		if($type == 'content' ) {
+		// 			$Toutput = explode("{{cv_file_url}}", $output);
+		// 			$Toutput[0] .= '
+		// CV File URL: {{cv_file_url}}';
+		// 			if( isset($args['medical_card_file_url']) ) {
+		// 				$Toutput[0] .= '
+		// Medical Card File URL: {{medical_card_file_url}}';
+		// 			}
+		// 			if( isset($args['cdl_file_url']) ) {
+		// 				$Toutput[0] .= '
+		// CDL File URL: {{cdl_file_url}}';	
+		// 			}
+		// 			if( isset($args['driver_licence_file_url']) ) {
+		// 				$Toutput[0] .= '
+		// Driver License File URL: {{driver_licence_file_url}}';	
+		// 			}
+
+		// 			if( isset($args['meet_the_requirement']) ) {
+		// 				$Toutput[0] .= '
+		// Do you meet all the requirements for this job?: {{meet_the_requirement}}';	
+		// 			}
+
+		// 			if( isset($args['cdl_driving_experience']) ) {
+		// 				$Toutput[0] .= '
+		// CDL Driving Experience: {{cdl_driving_experience}}';	
+		// 			}
+
+		// 			if( isset($args['clean_mvr']) ) {
+		// 				$Toutput[0] .= '
+		// Clean MVR?: {{clean_mvr}}';	
+		// 			}
+					
+		// 			$output = implode(" ",$Toutput);
+		// 		}
+		/**
+		 * End
+		 */
+
 		if ( !empty(self::$emails_vars[$key][$type]) ) {
 			$vars = self::$emails_vars[$key][$type];
 			foreach ($vars as $var) {
